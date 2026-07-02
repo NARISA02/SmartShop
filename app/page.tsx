@@ -10,6 +10,13 @@ type Product = {
   cost: number;
   stock: number;
 };
+type Sale = {
+  id: number;
+  date: string;
+  items: (Product & { quantity: number })[];
+  total: number;
+  profit: number;
+};
 
 export default function Home() {
   const [page, setPage] = useState("dashboard");
@@ -21,6 +28,7 @@ export default function Home() {
   ]);
 
  const [cart, setCart] = useState<(Product & { quantity: number })[]>([]);
+ const [sales, setSales] = useState<Sale[]>([]);
   const [searchText, setSearchText] = useState("");
 
   const [newProduct, setNewProduct] = useState({
@@ -176,15 +184,25 @@ const addProduct = () => {
   setPage("products");
 };
 
-const checkout = () => {
-    if (cart.length === 0) {
-      alert("ยังไม่มีสินค้าในตะกร้า");
-      return;
-    }
+ const checkout = () => {
+  if (cart.length === 0) {
+    alert("ยังไม่มีสินค้าในตะกร้า");
+    return;
+  }
 
-    alert("ชำระเงินสำเร็จ");
-    setCart([]);
+  const sale: Sale = {
+    id: Date.now(),
+    date: new Date().toLocaleString("th-TH"),
+    items: cart,
+    total,
+    profit,
   };
+
+  setSales([sale, ...sales]);
+  alert("ชำระเงินสำเร็จ");
+  setCart([]);
+};
+ 
 const deleteProduct = (id: number) => {
   const confirmDelete = confirm("ต้องการลบสินค้านี้ใช่ไหม?");
 
@@ -244,7 +262,12 @@ const profit = cart.reduce(
 }} className="w-full text-left bg-gray-100 px-4 py-3 rounded-xl">
             ➕ เพิ่มสินค้า
           </button>
-        </div>
+       <button
+  onClick={() => setPage("reports")}
+  className="w-full text-left bg-gray-100 px-4 py-3 rounded-xl"
+>
+  📈 รายงานยอดขาย
+</button> </div>
       </aside>
 
       <section className="flex-1 p-8">
@@ -421,7 +444,62 @@ const profit = cart.reduce(
           </>
         )}
 
-        {(page === "addProduct" || page === "editProduct") && (
+        {page === "reports" && (
+  <>
+    <h2 className="text-3xl font-bold">รายงานยอดขาย</h2>
+    <p className="text-gray-500 mt-1">ประวัติการขายทั้งหมด</p>
+
+    <div className="grid grid-cols-3 gap-6 mt-8">
+      <div className="bg-white rounded-xl shadow p-6">
+        <h3 className="font-bold">💰 ยอดขายรวม</h3>
+        <p className="text-3xl text-green-600 mt-4">
+          ฿{sales.reduce((sum, sale) => sum + sale.total, 0)}
+        </p>
+      </div>
+
+      <div className="bg-white rounded-xl shadow p-6">
+        <h3 className="font-bold">📈 กำไรรวม</h3>
+        <p className="text-3xl text-blue-600 mt-4">
+          ฿{sales.reduce((sum, sale) => sum + sale.profit, 0)}
+        </p>
+      </div>
+
+      <div className="bg-white rounded-xl shadow p-6">
+        <h3 className="font-bold">🧾 จำนวนบิล</h3>
+        <p className="text-3xl mt-4">{sales.length}</p>
+      </div>
+    </div>
+
+    <div className="bg-white rounded-xl shadow mt-8 p-6">
+      <h3 className="font-bold mb-4">ประวัติการขาย</h3>
+
+      {sales.length === 0 ? (
+        <p className="text-gray-400">ยังไม่มีประวัติการขาย</p>
+      ) : (
+        <div className="space-y-4">
+          {sales.map((sale) => (
+            <div key={sale.id} className="border rounded-xl p-4">
+              <div className="flex justify-between font-bold">
+                <span>{sale.date}</span>
+                <span>฿{sale.total}</span>
+              </div>
+
+              <ul className="mt-2 text-sm text-gray-600">
+                {sale.items.map((item) => (
+                  <li key={item.id}>
+                    {item.name} x{item.quantity} = ฿{item.price * item.quantity}
+                  </li>
+                ))}
+              </ul>
+
+              <p className="text-green-600 mt-2">กำไร ฿{sale.profit}</p>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  </>
+)}{(page === "addProduct" || page === "editProduct") && (
           <>
             <h2 className="text-3xl font-bold">{editingProduct ? "แก้ไขสินค้า" : "เพิ่มสินค้า"}</h2>
             <p className="text-gray-500 mt-1">กรอกข้อมูลสินค้าใหม่เข้าระบบ</p>
