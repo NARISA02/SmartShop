@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 type Product = {
   id: number;
@@ -40,6 +40,25 @@ export default function Home() {
     stock: "",
   });
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
+  useEffect(() => {
+  const savedProducts = localStorage.getItem("smartshop-products");
+  const savedSales = localStorage.getItem("smartshop-sales");
+
+  if (savedProducts) {
+    setProducts(JSON.parse(savedProducts));
+  }
+
+  if (savedSales) {
+    setSales(JSON.parse(savedSales));
+  }
+}, []);
+useEffect(() => {
+  localStorage.setItem("smartshop-products", JSON.stringify(products));
+}, [products]);
+
+useEffect(() => {
+  localStorage.setItem("smartshop-sales", JSON.stringify(sales));
+}, [sales]);
 
   const addToCart = (product: Product) => {
   if (product.stock <= 0) {
