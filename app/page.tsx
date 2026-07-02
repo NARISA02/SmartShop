@@ -20,7 +20,7 @@ export default function Home() {
     { id: 3, name: "นม", price: 15, cost: 10, stock: 5 },
   ]);
 
-  const [cart, setCart] = useState<Product[]>([]);
+ const [cart, setCart] = useState<(Product & { quantity: number })[]>([]);
   const [searchText, setSearchText] = useState("");
 
   const [newProduct, setNewProduct] = useState({
@@ -34,29 +34,106 @@ export default function Home() {
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
 
   const addToCart = (product: Product) => {
-    if (product.stock <= 0) {
-      alert("สินค้าหมดแล้ว");
-      return;
-    }
+  if (product.stock <= 0) {
+    alert("สินค้าหมดแล้ว");
+    return;
+  }
 
-    setCart([...cart, product]);
+  const existingItem = cart.find((item) => item.id === product.id);
 
-    setProducts(
-      products.map((item) =>
+  if (existingItem) {
+    setCart(
+      cart.map((item) =>
         item.id === product.id
-          ? { ...item, stock: item.stock - 1 }
+          ? { ...item, quantity: item.quantity + 1 }
           : item
       )
     );
-  };
+  } else {
+    setCart([...cart, { ...product, quantity: 1 }]);
+  }
 
-  const addProduct = () => {
+  setProducts(
+    products.map((item) =>
+      item.id === product.id
+        ? { ...item, stock: item.stock - 1 }
+        : item
+    )
+  );
+};
+ const increaseCartItem = (productId: number) => {
+  const product = products.find((item) => item.id === productId);
+
+  if (!product || product.stock <= 0) {
+    alert("สินค้าหมดแล้ว");
+    return;
+  }
+
+  setCart(
+    cart.map((item) =>
+      item.id === productId
+        ? { ...item, quantity: item.quantity + 1 }
+        : item
+    )
+  );
+
+  setProducts(
+    products.map((item) =>
+      item.id === productId
+        ? { ...item, stock: item.stock - 1 }
+        : item
+    )
+  );
+};
+
+const decreaseCartItem = (productId: number) => {
+  const cartItem = cart.find((item) => item.id === productId);
+
+  if (!cartItem) return;
+
+  if (cartItem.quantity === 1) {
+    setCart(cart.filter((item) => item.id !== productId));
+  } else {
+    setCart(
+      cart.map((item) =>
+        item.id === productId
+          ? { ...item, quantity: item.quantity - 1 }
+          : item
+      )
+    );
+  }
+
+  setProducts(
+    products.map((item) =>
+      item.id === productId
+        ? { ...item, stock: item.stock + 1 }
+        : item
+    )
+  );
+};
+
+const removeCartItem = (productId: number) => {
+  const cartItem = cart.find((item) => item.id === productId);
+
+  if (!cartItem) return;
+
+  setCart(cart.filter((item) => item.id !== productId));
+
+  setProducts(
+    products.map((item) =>
+      item.id === productId
+        ? { ...item, stock: item.stock + cartItem.quantity }
+        : item
+    )
+  );
+};
+
+const addProduct = () => {
   if (!newProduct.name || !newProduct.price || !newProduct.cost || !newProduct.stock) {
     alert("กรุณากรอกข้อมูลสินค้าให้ครบ");
     return;
   }
 
-  // ถ้ากำลังแก้ไขสินค้า
   if (editingProduct) {
     setProducts(
       products.map((item) =>
@@ -75,7 +152,6 @@ export default function Home() {
 
     setEditingProduct(null);
   } else {
-    // เพิ่มสินค้าใหม่
     const product: Product = {
       id: Date.now(),
       name: newProduct.name,
@@ -88,7 +164,6 @@ export default function Home() {
     setProducts([...products, product]);
   }
 
-  // ล้างฟอร์ม
   setNewProduct({
     id: 0,
     name: "",
@@ -101,7 +176,7 @@ export default function Home() {
   setPage("products");
 };
 
-  const checkout = () => {
+const checkout = () => {
     if (cart.length === 0) {
       alert("ยังไม่มีสินค้าในตะกร้า");
       return;
@@ -133,8 +208,11 @@ const editProduct = (product: Product) => {
 
   setPage("editProduct");
 };
-  const total = cart.reduce((sum, item) => sum + item.price, 0);
-  const profit = cart.reduce((sum, item) => sum + (item.price - item.cost), 0);
+  const total = cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
+const profit = cart.reduce(
+  (sum, item) => sum + (item.price - item.cost) * item.quantity,
+  0
+);
   const filteredProducts = products.filter((product) =>
   product.name.toLowerCase().includes(searchText.toLowerCase()) ||
   (product.category ?? "").toLowerCase().includes(searchText.toLowerCase())
@@ -232,12 +310,43 @@ const editProduct = (product: Product) => {
                   <p className="text-gray-400">ยังไม่มีสินค้า</p>
                 ) : (
                   <ul className="space-y-2">
-                    {cart.map((item, index) => (
-                      <li key={index} className="flex justify-between">
-                        <span>{item.name}</span>
-                        <span>฿{item.price}</span>
-                      </li>
-                    ))}
+                  {cart.map((item) => (
+  <li key={item.id} className="flex items-center justify-between gap-3">
+    <div>
+      <p>{item.name}</p>
+      <p className="text-sm text-gray-500">
+        ฿{item.price} x {item.quantity}
+      </p>
+    </div>
+
+    <div className="flex items-center gap-2">
+      <button
+        onClick={() => decreaseCartItem(item.id)}
+        className="bg-gray-200 px-3 py-1 rounded-lg"
+      >
+        -
+      </button>
+
+      <span>{item.quantity}</span>
+
+      <button
+        onClick={() => increaseCartItem(item.id)}
+        className="bg-gray-200 px-3 py-1 rounded-lg"
+      >
+        +
+      </button>
+
+      <button
+        onClick={() => removeCartItem(item.id)}
+        className="text-red-500"
+      >
+        🗑️
+      </button>
+
+      <span className="font-bold">฿{item.price * item.quantity}</span>
+    </div>
+  </li>
+))}
                   </ul>
                 )}
 
