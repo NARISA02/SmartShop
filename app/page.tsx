@@ -5,6 +5,7 @@ import { useState } from "react";
 type Product = {
   id: number;
   name: string;
+  category?: string;
   price: number;
   cost: number;
   stock: number;
@@ -23,12 +24,14 @@ export default function Home() {
   const [searchText, setSearchText] = useState("");
 
   const [newProduct, setNewProduct] = useState({
+    id: 0,
     name: "",
     category: "",
     price: "",
     cost: "",
     stock: "",
   });
+  const [editingProduct, setEditingProduct] = useState<Product | null>(null);
 
   const addToCart = (product: Product) => {
     if (product.stock <= 0) {
@@ -48,11 +51,31 @@ export default function Home() {
   };
 
   const addProduct = () => {
-    if (!newProduct.name || !newProduct.price || !newProduct.cost || !newProduct.stock) {
-      alert("กรุณากรอกข้อมูลสินค้าให้ครบ");
-      return;
-    }
+  if (!newProduct.name || !newProduct.price || !newProduct.cost || !newProduct.stock) {
+    alert("กรุณากรอกข้อมูลสินค้าให้ครบ");
+    return;
+  }
 
+  // ถ้ากำลังแก้ไขสินค้า
+  if (editingProduct) {
+    setProducts(
+      products.map((item) =>
+        item.id === editingProduct.id
+          ? {
+              id: editingProduct.id,
+              name: newProduct.name,
+              category: newProduct.category,
+              price: Number(newProduct.price),
+              cost: Number(newProduct.cost),
+              stock: Number(newProduct.stock),
+            }
+          : item
+      )
+    );
+
+    setEditingProduct(null);
+  } else {
+    // เพิ่มสินค้าใหม่
     const product: Product = {
       id: Date.now(),
       name: newProduct.name,
@@ -63,15 +86,20 @@ export default function Home() {
     };
 
     setProducts([...products, product]);
+  }
 
-    setNewProduct({
-      name: "",
-      category: "",
-      price: "",
-      cost: "",
-      stock: "",
-    });
-  };
+  // ล้างฟอร์ม
+  setNewProduct({
+    id: 0,
+    name: "",
+    category: "",
+    price: "",
+    cost: "",
+    stock: "",
+  });
+
+  setPage("products");
+};
 
   const checkout = () => {
     if (cart.length === 0) {
@@ -90,6 +118,20 @@ const deleteProduct = (id: number) => {
   }
 
   setProducts(products.filter((product) => product.id !== id));
+};
+const editProduct = (product: Product) => {
+  setEditingProduct(product);
+
+  setNewProduct({
+    id: product.id,
+    name: product.name,
+    category: product.category ?? "",
+    price: product.price.toString(),
+    cost: product.cost.toString(),
+    stock: product.stock.toString(),
+  });
+
+  setPage("editProduct");
 };
   const total = cart.reduce((sum, item) => sum + item.price, 0);
   const profit = cart.reduce((sum, item) => sum + (item.price - item.cost), 0);
@@ -118,7 +160,10 @@ const deleteProduct = (id: number) => {
           
             📦 สินค้า
           </button>
-          <button onClick={() => setPage("addProduct")} className="w-full text-left bg-gray-100 px-4 py-3 rounded-xl">
+          <button onClick={() => {
+  setEditingProduct(null);
+  setPage("addProduct");
+}} className="w-full text-left bg-gray-100 px-4 py-3 rounded-xl">
             ➕ เพิ่มสินค้า
           </button>
         </div>
@@ -243,7 +288,7 @@ const deleteProduct = (id: number) => {
                   </tr>
                 </thead>
                 <tbody>
-                  {products.map((product) => (
+                  {filteredProducts.map((product) => (
                     <tr key={product.id} className="border-t">
                       <td className="p-4">{product.name}</td>
                       <td className="p-4">{product.category}</td>
@@ -251,7 +296,12 @@ const deleteProduct = (id: number) => {
                       <td className="p-4">฿{product.cost}</td>
                       <td className="p-4">{product.stock}</td>
                       <td className="p-4">
-  <button className="mr-3">✏️</button>
+  <button
+  onClick={() => editProduct(product)}
+  className="mr-3"
+>
+  🖊️
+</button>
   <button onClick={() => deleteProduct(product.id)}>🗑️</button>
 </td>
                     </tr>
@@ -262,9 +312,9 @@ const deleteProduct = (id: number) => {
           </>
         )}
 
-        {page === "addProduct" && (
+        {(page === "addProduct" || page === "editProduct") && (
           <>
-            <h2 className="text-3xl font-bold">เพิ่มสินค้า</h2>
+            <h2 className="text-3xl font-bold">{editingProduct ? "แก้ไขสินค้า" : "เพิ่มสินค้า"}</h2>
             <p className="text-gray-500 mt-1">กรอกข้อมูลสินค้าใหม่เข้าระบบ</p>
 
             <div className="bg-white rounded-xl shadow p-6 mt-8 max-w-xl space-y-4">
@@ -317,8 +367,10 @@ const deleteProduct = (id: number) => {
                 onClick={addProduct}
                 className="w-full bg-blue-600 text-white py-3 rounded-xl hover:bg-blue-700"
               >
-                บันทึกสินค้า
-              </button>
+               
+  {editingProduct ? "บันทึกการแก้ไข" : "บันทึกสินค้า"}
+</button>
+   
             </div>
           </>
         )}
